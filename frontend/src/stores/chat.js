@@ -79,20 +79,22 @@ export const useChatStore = defineStore('chat', () => {
 
     // 添加占位的 AI 消息
     const aiMsgId = Date.now() + 1
-    const aiMsg = {
+    messages.value.push({
       id: aiMsgId,
       role: 'assistant',
       content: '',
-    }
-    messages.value.push(aiMsg)
+    })
 
     abortController = api.sendMessageStream(
       text,
       currentConversationId.value,
-      // onToken - 逐字追加（直接引用，避免每次 .find()）
+      // onToken - 逐字追加
       (token) => {
-        aiMsg.content += token
-        streamingContent.value += token
+        const msg = messages.value.find(m => m.id === aiMsgId)
+        if (msg) {
+          msg.content += token
+          streamingContent.value += token
+        }
       },
       // onStatus - 处理状态更新
       (status) => {
@@ -118,8 +120,9 @@ export const useChatStore = defineStore('chat', () => {
       },
       // onError
       (errMsg) => {
-        if (!aiMsg.content) {
-          aiMsg.content = `请求失败：${errMsg}`
+        const msg = messages.value.find(m => m.id === aiMsgId)
+        if (msg && !msg.content) {
+          msg.content = `请求失败：${errMsg}`
         }
         error.value = errMsg || '请求失败，请检查后端服务'
         isLoading.value = false
