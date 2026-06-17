@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      <ChatMessage v-for="msg in chatStore.messages" :key="msg.id" :message="msg" v-memo="[msg.id, msg.content]" />
+      <ChatMessage v-for="msg in chatStore.messages" :key="msg.id" :message="msg" />
 
       <div v-if="chatStore.isLoading || chatStore.statusText" class="loading-card">
         <div class="typing-indicator">

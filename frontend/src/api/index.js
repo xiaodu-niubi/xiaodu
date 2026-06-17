@@ -53,7 +53,7 @@ function sendMessageStream(message, conversationId, onToken, onStatus, onDone, o
             } else if (data.type === 'done' && data.conversation_id) {
               onDone(data.conversation_id)
             }
-          } catch { /* 跳过无法解析的 SSE 行 */ }
+          } catch (e) { console.warn('SSE parse error:', line, e) }
         }
       }
     }
