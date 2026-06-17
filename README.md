@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>DeepSeek 多智能体系统</h1>
+  <h1>多智能体系统</h1>
   <p><strong>基于 LangGraph 的多智能体协作平台</strong></p>
   <p>
     <a href="#快速开始">快速开始</a> •
@@ -75,11 +75,11 @@ docker compose up -d
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填入你的 DeepSeek API Key
+# 编辑 .env，填入你的 API Key
 ```
 
 **必须配置**：
-- `LLM_API_KEY` — [DeepSeek API Key](https://platform.deepseek.com/api_keys)
+- `LLM_API_KEY` — [API Key](https://platform.deepseek.com/api_keys)
 
 ### 4. 安装依赖
 
@@ -266,9 +266,9 @@ LangGraph 调度图
 
 | 配置项 | 说明 | 必须 |
 |--------|------|------|
-| `LLM_API_KEY` | DeepSeek API Key | ✅ |
-| `LLM_MODEL` | 模型名称（默认 deepseek-v4-pro） | - |
-| `LLM_BASE_URL` | API 地址（默认 DeepSeek 官方） | - |
+| `LLM_API_KEY` | API Key | ✅ |
+| `LLM_MODEL` | 模型名称 | - |
+| `LLM_BASE_URL` | API 地址 | - |
 | `MYSQL_*` | MySQL 连接（默认 localhost:3307） | - |
 | `REDIS_*` | Redis 连接（默认 localhost:6379） | - |
 | `MAX_AGENT_ITERATIONS` | ReAct 最大循环次数（默认 10） | - |
@@ -279,7 +279,7 @@ LangGraph 调度图
 
 | 分类 | 技术 | 版本 |
 |------|------|------|
-| LLM API | DeepSeek（兼容 OpenAI） | deepseek-v4-pro |
+| LLM API | 兼容 OpenAI 接口 | - |
 | Agent 框架 | LangChain + LangGraph | 0.3.x / 0.2.x |
 | 后端 | FastAPI + Uvicorn | 0.115 / 0.34 |
 | 前端 | Vue 3 + Pinia + Vite | 3.4 / 2.1 / 5.0 |
