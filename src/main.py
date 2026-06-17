@@ -105,6 +105,7 @@ async def root():
 
 
 @app.get("/health")
+@app.get("/api/health")
 async def health():
     """健康检查端点"""
     checks = {}

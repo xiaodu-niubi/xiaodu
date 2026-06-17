@@ -23,6 +23,8 @@ def build_llm(
         temperature=temperature if temperature is not None else settings.llm_temperature,
         max_tokens=settings.llm_max_tokens,
         streaming=streaming,
+        timeout=60,
+        max_retries=2,
     )
     llm = ChatOpenAI(**kwargs)
 

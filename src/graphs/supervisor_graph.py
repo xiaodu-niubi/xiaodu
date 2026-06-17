@@ -317,7 +317,7 @@ class SupervisorGraph:
                 while iteration < max_iterations:
                     iteration += 1
                     try:
-                        response = llm_ns.invoke(messages)
+                        response = await llm_ns.ainvoke(messages)
                     except Exception as e:
                         yield {"type": "error", "content": f"LLM 调用失败: {e}"}
                         return
@@ -354,7 +354,7 @@ class SupervisorGraph:
             # Phase 4: 流式输出最终回答
             final_llm = build_llm(streaming=True, tools=[])
             try:
-                for chunk in final_llm.stream(messages):
+                async for chunk in final_llm.astream(messages):
                     if chunk.content:
                         full_response += chunk.content
                         yield {"type": "token", "content": chunk.content}
