@@ -1,11 +1,11 @@
 <template>
   <div class="message" :class="message.role">
     <div class="message-avatar" :class="message.role">
-      <img v-if="message.role === 'assistant'" src="@/image/deepseek.webp" alt="AI" class="avatar-img" />
-      <img v-else src="@/image/user.png" alt="用户" class="avatar-img" />
+      <img v-if="message.role === 'assistant'" src="@/image/deepseek.webp" alt="AI" class="avatar-img" @error="e => e.target.style.display='none'" />
+      <img v-else src="@/image/user.png" alt="用户" class="avatar-img" @error="e => e.target.style.display='none'" />
     </div>
     <div class="message-body">
-      <div class="message-role-name">{{ message.role === 'user' ? '你' : 'DeepSeek' }}</div>
+      <div class="message-role-name">{{ message.role === 'user' ? '你' : 'AI 助手' }}</div>
       <div class="message-bubble" :class="message.role">
         <div class="message-text" v-html="renderedContent" />
         <div v-if="message.tool_calls?.length" class="tool-calls">

@@ -5,7 +5,7 @@
         <span class="brand-icon">
           <img src="@/image/deepseek.webp" alt="DeepSeek" class="brand-icon-img" />
         </span>
-        <span class="brand-name">DeepSeek</span>
+        <span class="brand-name">多智能体系统</span>
       </div>
       <button class="btn-new" @click="chatStore.newConversation()">
         <span>＋</span> 新对话
@@ -13,7 +13,14 @@
     </div>
 
     <div class="conv-list">
-      <template v-if="groupedConversations.length > 0">
+      <div v-if="chatStore.conversationsLoading" class="conv-loading">
+        <div v-for="i in 4" :key="i" class="skeleton-item">
+          <div class="skeleton-line short" />
+          <div class="skeleton-line long" />
+        </div>
+      </div>
+
+      <template v-else-if="groupedConversations.length > 0">
         <template v-for="group in groupedConversations" :key="group.label">
           <div class="group-header">{{ group.label }}</div>
           <div
@@ -36,14 +43,14 @@
               <button class="btn-menu" @click="toggleMenu(conv.id)" title="更多">⋯</button>
               <div v-if="openMenuId === conv.id" class="menu-dropdown">
                 <button class="menu-item" @click="handleRename(conv)">✏️ 重命名</button>
-                <button class="menu-item danger" @click="handleDelete(conv.id)">🗑️ 删除</button>
+                <button class="menu-item danger" @click="handleDeleteConfirm(conv.id)">🗑️ 删除</button>
               </div>
             </div>
           </div>
         </template>
       </template>
 
-      <div v-if="chatStore.conversations.length === 0" class="empty-list">
+      <div v-else class="empty-list">
         <div class="empty-icon">💭</div>
         <p>还没有对话</p>
         <p class="empty-sub">点击上方按钮开始</p>
@@ -51,9 +58,22 @@
     </div>
 
     <div class="sidebar-footer">
-      <span class="status-dot" :class="statusClass" />
-      <span class="status-text">{{ statusText }}</span>
+      <span class="status-dot" :class="chatStore.healthClass" />
+      <span class="status-text">{{ chatStore.healthText }}</span>
     </div>
+
+    <ConfirmModal
+      :visible="modalVisible"
+      :type="modalType"
+      :title="modalTitle"
+      :message="modalMessage"
+      :danger="modalDanger"
+      :initial-value="''"
+      placeholder="输入新标题"
+      :confirm-text="modalType === 'confirm' ? '删除' : '保存'"
+      @confirm="onModalConfirm"
+      @cancel="onModalCancel"
+    />
   </aside>
 </template>
 
@@ -61,26 +81,63 @@
 import { useChatStore } from '../stores/chat.js'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import api from '../api/index.js'
+import ConfirmModal from './ConfirmModal.vue'
 
 defineEmits(['toggle'])
 
 const chatStore = useChatStore()
-const statusClass = ref('checking')
-const statusText = ref('检测中...')
 const openMenuId = ref(null)
+const modalVisible = ref(false)
+const modalType = ref('confirm')
+const modalTitle = ref('')
+const modalMessage = ref('')
+const modalDanger = ref(false)
+const modalAction = ref(null)
 
 function toggleMenu(id) {
   openMenuId.value = openMenuId.value === id ? null : id
 }
 
+function closeMenu(e) {
+  if (!e.target.closest('.conv-menu')) {
+    openMenuId.value = null
+  }
+}
+
 function handleRename(conv) {
   openMenuId.value = null
-  const newTitle = prompt('请输入新标题', conv.title || '新对话')
-  if (newTitle && newTitle.trim() && newTitle.trim() !== conv.title) {
-    api.updateConversationTitle(conv.id, newTitle.trim()).then(() => {
-      chatStore.loadConversations()
-    })
+  modalType.value = 'prompt'
+  modalTitle.value = '重命名对话'
+  modalMessage.value = ''
+  modalDanger.value = false
+  modalAction.value = async (newTitle) => {
+    if (newTitle && newTitle.trim() && newTitle.trim() !== conv.title) {
+      await api.updateConversationTitle(conv.id, newTitle.trim())
+      await chatStore.loadConversations()
+    }
   }
+  modalVisible.value = true
+}
+
+function handleDeleteConfirm(id) {
+  openMenuId.value = null
+  modalType.value = 'confirm'
+  modalTitle.value = '删除对话'
+  modalMessage.value = '确定删除这个对话吗？此操作不可撤销。'
+  modalDanger.value = true
+  modalAction.value = async () => {
+    await chatStore.deleteConversation(id)
+  }
+  modalVisible.value = true
+}
+
+function onModalConfirm(value) {
+  modalVisible.value = false
+  if (modalAction.value) modalAction.value(value)
+}
+
+function onModalCancel() {
+  modalVisible.value = false
 }
 
 const groupedConversations = computed(() => {
@@ -109,35 +166,13 @@ const groupedConversations = computed(() => {
   return groups.filter(g => g.conversations.length > 0)
 })
 
-async function checkHealth() {
-  try {
-    const health = await api.healthCheck()
-    const allOk = Object.values(health).every(v => v === '正常')
-    statusClass.value = allOk ? 'online' : 'degraded'
-    statusText.value = allOk ? '全部服务正常' : '部分服务异常'
-  } catch {
-    statusClass.value = 'offline'
-    statusText.value = '服务未连接'
-  }
-}
-
-const healthInterval = setInterval(checkHealth, 30000)
 onMounted(() => {
   chatStore.loadConversations()
-  checkHealth()
   document.addEventListener('click', closeMenu)
 })
 onUnmounted(() => {
-  clearInterval(healthInterval)
   document.removeEventListener('click', closeMenu)
 })
-
-function handleDelete(id) {
-  openMenuId.value = null
-  if (confirm('确定删除这个对话吗？')) {
-    chatStore.deleteConversation(id)
-  }
-}
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -359,4 +394,26 @@ function formatTime(ts) {
 }
 
 .status-text { font-size: 0.72rem; color: var(--text-dim); }
+
+.conv-loading {
+  padding: 8px 12px;
+}
+.skeleton-item {
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.skeleton-line {
+  height: 12px;
+  background: var(--surface);
+  border-radius: 4px;
+  animation: shimmer 1.5s infinite;
+}
+.skeleton-line.short { width: 60%; }
+.skeleton-line.long { width: 85%; }
+@keyframes shimmer {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
 </style>

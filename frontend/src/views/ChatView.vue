@@ -2,7 +2,7 @@
   <div class="chat-view">
     <div class="messages-container" ref="messagesContainer">
       <div v-if="chatStore.messages.length === 0" class="welcome">
-        <h2>DeepSeek 多智能体系统</h2>
+        <h2>多智能体系统</h2>
         <p class="welcome-desc">五大智能体分工协作，具备动态知识检索、ReAct 推理与函数调用能力</p>
         <div class="feature-grid">
           <div class="feature-card">
@@ -42,7 +42,7 @@
         </div>
       </div>
 
-      <ChatMessage v-for="msg in chatStore.messages" :key="msg.id" :message="msg" />
+      <ChatMessage v-for="msg in chatStore.messages" :key="msg.id" :message="msg" v-memo="[msg.id, msg.content]" />
 
       <div v-if="chatStore.isLoading || chatStore.statusText" class="loading-card">
         <div class="typing-indicator">
@@ -53,7 +53,10 @@
 
       <div v-if="chatStore.error" class="error-banner">
         <span>⚠ {{ chatStore.error }}</span>
-        <button @click="chatStore.error = null">×</button>
+        <div class="error-actions">
+          <button v-if="retryAction" class="error-retry" @click="handleRetry">重试</button>
+          <button class="error-dismiss" @click="chatStore.error = null; retryAction = null">×</button>
+        </div>
       </div>
     </div>
 
@@ -62,13 +65,14 @@
 </template>
 
 <script setup>
-import { watch, ref, nextTick } from 'vue'
+import { watch, ref, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '../stores/chat.js'
 import ChatMessage from '../components/ChatMessage.vue'
 import ChatInput from '../components/ChatInput.vue'
 
 const chatStore = useChatStore()
 const messagesContainer = ref(null)
+const retryAction = ref(null)
 
 const quickQuestions = [
   '公司提供哪些产品？',
@@ -77,15 +81,47 @@ const quickQuestions = [
   '如何申请退款？',
 ]
 
+let scrollPending = false
 watch(
   () => [chatStore.messages.length, chatStore.streamingContent],
-  async () => {
-    await nextTick()
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  () => {
+    if (!scrollPending) {
+      scrollPending = true
+      requestAnimationFrame(() => {
+        scrollPending = false
+        if (messagesContainer.value) {
+          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+        }
+      })
     }
   }
 )
+
+// 离线检测
+function handleOffline() {
+  chatStore.error = '网络连接已断开，请检查网络'
+}
+function handleOnline() {
+  if (chatStore.error === '网络连接已断开，请检查网络') {
+    chatStore.error = null
+  }
+}
+onMounted(() => {
+  window.addEventListener('offline', handleOffline)
+  window.addEventListener('online', handleOnline)
+})
+onUnmounted(() => {
+  window.removeEventListener('offline', handleOffline)
+  window.removeEventListener('online', handleOnline)
+})
+
+function handleRetry() {
+  if (retryAction.value) {
+    retryAction.value()
+    retryAction.value = null
+  }
+  chatStore.error = null
+}
 </script>
 
 <style scoped>
@@ -245,7 +281,25 @@ watch(
   margin-top: 16px;
   font-size: 0.85rem;
 }
-.error-banner button {
+.error-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.error-retry {
+  padding: 4px 12px;
+  background: rgba(248,113,113,0.15);
+  border: 1px solid rgba(248,113,113,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--error);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all var(--transition);
+}
+.error-retry:hover {
+  background: rgba(248,113,113,0.25);
+}
+.error-dismiss {
   background: none;
   border: none;
   color: var(--error);
@@ -253,7 +307,7 @@ watch(
   font-size: 1.2rem;
   opacity: 0.7;
 }
-.error-banner button:hover { opacity: 1; }
+.error-dismiss:hover { opacity: 1; }
 
 @media (max-width: 768px) {
   .feature-grid { grid-template-columns: 1fr; }

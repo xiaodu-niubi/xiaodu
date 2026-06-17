@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useChatStore } from './stores/chat.js'
 import ConversationList from './components/ConversationList.vue'
 import ChatView from './views/ChatView.vue'
@@ -20,6 +20,10 @@ const chatStore = useChatStore()
 
 onMounted(() => {
   chatStore.loadConversations()
+  chatStore.startHealthCheck()
+})
+onUnmounted(() => {
+  chatStore.stopHealthCheck()
 })
 </script>
 

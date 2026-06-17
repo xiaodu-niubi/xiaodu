@@ -7,21 +7,29 @@ export const useChatStore = defineStore('chat', () => {
   const currentConversationId = ref(null)
   const messages = ref([])
   const isLoading = ref(false)
+  const conversationsLoading = ref(false)
   const streamingContent = ref('')
   const statusText = ref('')
   const error = ref(null)
   const sidebarOpen = ref(true)
+  const healthClass = ref('checking')
+  const healthText = ref('检测中...')
   let abortController = null
+  let healthInterval = null
 
   const currentConversation = computed(() =>
     conversations.value.find(c => c.id === currentConversationId.value)
   )
 
   async function loadConversations() {
+    conversationsLoading.value = true
     try {
       conversations.value = await api.listConversations()
     } catch (e) {
-      console.error('加载对话列表失败:', e)
+      error.value = '加载对话列表失败'
+    }
+    finally {
+      conversationsLoading.value = false
     }
   }
 
@@ -71,22 +79,20 @@ export const useChatStore = defineStore('chat', () => {
 
     // 添加占位的 AI 消息
     const aiMsgId = Date.now() + 1
-    messages.value.push({
+    const aiMsg = {
       id: aiMsgId,
       role: 'assistant',
       content: '',
-    })
+    }
+    messages.value.push(aiMsg)
 
     abortController = api.sendMessageStream(
       text,
       currentConversationId.value,
-      // onToken - 逐字追加
+      // onToken - 逐字追加（直接引用，避免每次 .find()）
       (token) => {
-        const msg = messages.value.find(m => m.id === aiMsgId)
-        if (msg) {
-          msg.content += token
-          streamingContent.value += token
-        }
+        aiMsg.content += token
+        streamingContent.value += token
       },
       // onStatus - 处理状态更新
       (status) => {
@@ -112,9 +118,8 @@ export const useChatStore = defineStore('chat', () => {
       },
       // onError
       (errMsg) => {
-        const msg = messages.value.find(m => m.id === aiMsgId)
-        if (msg && !msg.content) {
-          msg.content = `请求失败：${errMsg}`
+        if (!aiMsg.content) {
+          aiMsg.content = `请求失败：${errMsg}`
         }
         error.value = errMsg || '请求失败，请检查后端服务'
         isLoading.value = false
@@ -152,11 +157,36 @@ export const useChatStore = defineStore('chat', () => {
     sidebarOpen.value = !sidebarOpen.value
   }
 
+  async function checkHealth() {
+    try {
+      const health = await api.healthCheck()
+      const allOk = Object.values(health).every(v => v === '正常')
+      healthClass.value = allOk ? 'online' : 'degraded'
+      healthText.value = allOk ? '全部服务正常' : '部分服务异常'
+    } catch {
+      healthClass.value = 'offline'
+      healthText.value = '服务未连接'
+    }
+  }
+
+  function startHealthCheck() {
+    checkHealth()
+    healthInterval = setInterval(checkHealth, 30000)
+  }
+
+  function stopHealthCheck() {
+    if (healthInterval) {
+      clearInterval(healthInterval)
+      healthInterval = null
+    }
+  }
+
   return {
     conversations,
     currentConversationId,
     messages,
     isLoading,
+    conversationsLoading,
     streamingContent,
     statusText,
     error,
@@ -168,6 +198,10 @@ export const useChatStore = defineStore('chat', () => {
     sendMessage,
     stopGeneration,
     deleteConversation,
+    healthClass,
+    healthText,
+    startHealthCheck,
+    stopHealthCheck,
     toggleSidebar,
   }
 })
