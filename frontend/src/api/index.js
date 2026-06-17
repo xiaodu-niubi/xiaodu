@@ -44,6 +44,7 @@ function sendMessageStream(message, conversationId, onToken, onStatus, onDone, o
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6))
+            console.log('[SSE]', data.type, data.content?.slice(0, 20) || data.conversation_id || '')
             if (data.type === 'token') {
               onToken(data.content)
             } else if (data.type === 'status') {
@@ -58,7 +59,8 @@ function sendMessageStream(message, conversationId, onToken, onStatus, onDone, o
       }
     }
   } catch (e) {
-    if (e.name === 'AbortError') return
+    if (e.name === 'AbortError') { console.log('[SSE] aborted'); return }
+    console.error('[SSE] fetch error:', e.message)
     onError(e.message)
   }
   }
