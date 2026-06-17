@@ -59,8 +59,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/deepseek-multi-agent.git
-cd deepseek-multi-agent
+git clone https://github.com/xiaodu-niubi/xiaodu.git
+cd xiaodu
 ```
 
 ### 2. 启动数据库
