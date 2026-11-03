@@ -1,0 +1,2 @@
+# Optional semantic embeddings. Configure EMBEDDING_BACKEND=sentence_transformers.
+sentence-transformers==3.4.1

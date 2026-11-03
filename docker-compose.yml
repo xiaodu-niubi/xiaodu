@@ -1,0 +1,23 @@
+# MySQL 和 Redis 已改为本地运行，docker-compose 仅保留 Chroma（可选）
+# 如果本地没有安装 Chroma，可用此 Compose 单独启动 Chroma 服务
+# 启动前需将 .env 中 CHROMA_MODE 改为 http
+
+services:
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: deepseek-chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  chroma_data:
