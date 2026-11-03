@@ -30,3 +30,10 @@ chroma_data/
 tmp/
 outputs/
 model_cache/
+
+# 系统文件
+.DS_Store
+
+# 含硬编码密码的部署脚本（本地使用）
+deploy_containers.py
+remote_setup.py
